@@ -3,7 +3,7 @@ import sys
 import get_pip
 import os
 import importlib
-
+import contextlib
 
 def install(package):
     '''
@@ -15,6 +15,7 @@ def install(package):
 
 
 required = []
+failed = []
 
 # Try to open reqirements.txt file and read all required packages
 try:
@@ -33,32 +34,41 @@ if len(required) > 0:
     if ans.lower() == "y":
         for package in required:
             try:
-            	print("[LOG] Looking for", package)
-          		__import__(package)
-          		print("[LOG]", package, "is already installed, skipping...")
-      		except ImportError:
-          		print("[EXCEPTION]", package, "not installed")
+                print("[LOG] Looking for", package)
+                with contextlib.redirect_stdout(None):
+                    __import__(package)
+                print("[LOG]", package, "is already installed, skipping...")
+            except ImportError:
+                print("[LOG]", package, "not installed")
 
-          		try:
-              		print("[LOG] Trying to install", package, "via pip")
-              		import pip
-              		install(package)
-              		print("[LOG]", package, "has been installed")
-         		except ImportError:
-              		print("[EXCEPTION] Pip not installed on system")
-              		print("[LOG] Trying to install pip")
-              		get_pip.main()
-              		print("[LOG] Pip has been installed")
-              		try:
-                  		print("[LOG] Trying to install", package)
-                  		import pip
-                  		install(package)
-                  		print("[LOG]", package, "has been installed")
-              		except Exception as e:
-                  		print("[ERROR 1]", package, "could not be installed:", e)
+                try:
+                    print("[LOG] Trying to install", package, "via pip")
+                    try:
+                        import pip
+                    except:
+                        print("[EXCEPTION] Pip is not installed")
+                        print("[LOG] Trying to install pip")
+                        get_pip.main()
+                        print("[LOG] Pip has been installed")
 
-          		__import__(package)
-  	else:
-    	print("[STOP] Operation terminated by user")
+                    print("[LOG] Installing", package)    
+                    install(package)
+                    with contextlib.redirect_stdout(None):
+                        __import__(package)
+                    print("[LOG]", package, "has been installed")
+                except Exception as e:
+                    print("[ERROR] Could not install", package, "-", e)
+                    failed.append(package)
+                        
+    else:
+        print("[STOP] Operation terminated by user")
 else:
-  print("[LOG] No packages to install")
+    print("[LOG] No packages to install")
+
+if len(failed) > 0:
+    print("[FAILED]", len(failed), "package(s) were not installed. Failed package install(s):", end=" ")
+    for x, package in enumerate(failed):
+        if x != len(failed) -1:
+            print(package, end=",")
+        else:
+            print(package)
