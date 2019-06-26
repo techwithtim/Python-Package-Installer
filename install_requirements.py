@@ -4,38 +4,60 @@ import get_pip
 import os
 import importlib
 
-file = open("requirements.txt", "r")
-file_lines = file.readlines()
-required = [line.strip().lower() for line in file_lines]
-file.close()
 
 def install(package):
-    subprocess.call([sys.executable, "-m", "pip", "install", package])
+  '''
+  installs a package using pip
 
-for package in required:
-  try:
-      print("[IMPORT] Trying to import", package)
-      __import__(package)
-  except:
-      print("[EXCEPTION]", package, "not installed")
+  :param package: string
+  '''
+  subprocess.call([sys.executable, "-m", "pip", "install", package])
 
+
+required = []
+
+# Try to open reqirements.txt file and read all required packages
+try:
+  file = open("requirements.txt", "r")
+  file_lines = file.readlines()
+  required = [line.strip().lower() for line in file_lines]
+  file.close()
+except FileNotFoundError:
+  print("[ERROR] No requiremnts.txt file found")
+
+if len(required) > 0:
+  print("[INPUT] You are about to install", len(required), "packages, would you like to proceed (y/n):", end=" ")
+  ans = input()
+
+  if ans.lower() == "y":
+    for package in required:
       try:
-          print("[LOG] Trying to install", package, "via pip")
-          import pip
-          install(package)
-          print("[LOG]", package, "has been installed")
-      except:
-          print("[EXCEPTION] Pip not installed on system")
-          print("[LOG] Trying to install pip")
-          get_pip.main()
-          print("[LOG] Pip has been installed")
+          print("[LOG] Looking for", package)
+          __import__(package)
+          print("[LOG]", package, "is already installed, skipping...")
+      except ImportError:
+          print("[EXCEPTION]", package, "not installed")
+
           try:
-              print("[LOG] Trying to install", package)
+              print("[LOG] Trying to install", package, "via pip")
               import pip
               install(package)
               print("[LOG]", package, "has been installed")
-          except:
-              print("[ERROR 1]", package, "could not be installed")
+          except ImportError:
+              print("[EXCEPTION] Pip not installed on system")
+              print("[LOG] Trying to install pip")
+              get_pip.main()
+              print("[LOG] Pip has been installed")
+              try:
+                  print("[LOG] Trying to install", package)
+                  import pip
+                  install(package)
+                  print("[LOG]", package, "has been installed")
+              except Exception as e:
+                  print("[ERROR 1]", package, "could not be installed:", e)
 
-      __import__(package)
-    
+          __import__(package)
+  else:
+    print("[STOP] Operation terminated by user")
+else:
+  print("[LOG] No packages to install")
